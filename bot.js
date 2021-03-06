@@ -2,9 +2,16 @@ const Discord = require('discord.js');
 const fs = require('fs');
 const ini = require('ini');
 
-// Load configuration.
+////////////////////////////////////////////////////////////////////////////////////
+//
+//								CONFIGURATION
+//
+////////////////////////////////////////////////////////////////////////////////////
+
+// Configuration file buffer.
 var configFile;
 
+// If config file does not exist, create it and close.
 try
 {
 	configFile = fs.readFileSync("./config.ini", "utf-8");
@@ -16,27 +23,37 @@ catch(e)
 	process.exit(0);
 }
 
+// Parse config file.
 const config = ini.parse(configFile);
 
-// For logging
+////////////////////////////////////////////////////////////////////////////////////
+//
+//								LOGGING
+//
+////////////////////////////////////////////////////////////////////////////////////
+
+// If the log folder does not exit, create it.
 if(!fs.existsSync("logs/"))
 {
 	fs.mkdirSync("logs");
 }
 
+// Do not overwrite old logs.
 var logNum = 0;
 while(fs.existsSync("logs/log-" + logNum + ".log")) { logNum++; }
 
 var logFile = "logs/log-" + logNum + ".log";
 
+// Master function for logging. Outputs to both log file and console.
 function log(str)
 {
+	// Create datestamp.
 	var time = new Date().toISOString();
 	time = time.replace('T', ' ');
 	time = time.replace(/\..+/, '');
 	time = "[" + time + "] ";
 
-
+	// Output to log file.
 	fs.appendFile(logFile, time + str + "\n", (err) => {
 		if(err)
 		{
@@ -46,19 +63,68 @@ function log(str)
 		}
 	});
 
-	console.log(str);
+	// Output to console.
+	console.log(time + str);
 }
 
-log("Server started.");
+////////////////////////////////////////////////////////////////////////////////////
+//
+//								DISCORD
+//
+////////////////////////////////////////////////////////////////////////////////////
 
-const client = new Discord.Client();
+const client = new Discord.Client({ws:{intents:['GUILDS', 'GUILD_MEMBERS', 'GUILD_MESSAGES']}});
+
+var reconnectInterval;
+
+function assignRoles(guild)
+{
+	guild.members.fetch().then(arr => {
+		console.log("Hewwo?");
+		console.log(arr);
+	}).catch(err => {
+		log(err);
+		log("Failed to fetch member list.");
+	});
+}
 
 client.on('ready', () => {
 	log("Connected to Discord.")
+	clearInterval(reconnectInterval);
+});
+
+client.on('error', err => {
+	log(err);
+	log("Reconnecting in 5 seconds.");
+	reconnectInterval = setInterval(() => {
+		log("Attempting to reconnect.")
+		client.login(config.Configuration.Secret);
+	}, 5000);
 });
 
 client.on('message', msg => {
+	var msgArr = msg.content.split(" ");
+	var command = msgArr[0].toLowerCase();
+	if(!command.startsWith("$")) return;
 
+	log("Received command from user " + msg.author.username + ": \"" + command + "\".");
+
+	switch(command)
+	{
+		case "$ping":
+			msg.reply("Pong!");
+			break;
+		case "$assign":
+			assignRoles(msg.guild);
+			break;
+	}
 });
 
+////////////////////////////////////////////////////////////////////////////////////
+//
+//								BEGIN
+//
+////////////////////////////////////////////////////////////////////////////////////
+
+log("Server started.");
 client.login(config.Configuration.Secret);
