@@ -1,0 +1,7 @@
+{
+	"name": "DiscordServerManager",
+	"dependencies": {
+		"discord.js": "^12.5.1",
+		"ini": "^2.0.0"
+	}
+}
