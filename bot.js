@@ -82,6 +82,16 @@ var noKickRoles = config.Configuration.NoKickRoles.replace(/\s*,\s*/g, ',').spli
 
 var toConfirm = [];
 
+function checkPermission(msg)
+{
+	if(msg.member.hasPermission('ADMINISTRATOR'))
+	{
+		return true;
+	}
+
+	return false;
+}
+
 function assignRoles(guild)
 {
 	// Fetch user list
@@ -245,6 +255,9 @@ client.on('error', err => {
 });
 
 client.on('message', msg => {
+	if(!checkPermission(msg))
+		return;
+		
 	var msgArr = msg.content.split(" ");
 	var command = msgArr[0].toLowerCase();
 	if(!command.startsWith("$")) return;
