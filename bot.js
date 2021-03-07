@@ -92,8 +92,9 @@ function checkPermission(msg)
 	return false;
 }
 
-function assignRoles(guild)
+function assignRoles(msg)
 {
+	guild = msg.guild;
 	// Fetch user list
 	guild.members.fetch().then(users => {
 
@@ -115,7 +116,7 @@ function assignRoles(guild)
 			}
 			
 			// Id the user does not have a special role, add to list.
-			if(!assign)
+			if(assign)
 			{
 				assignArr.push(userArr[i]);
 			}
@@ -132,9 +133,33 @@ function assignRoles(guild)
 			userArr[idx2] = temp;
 		}
 
-		console.log(userArr);
+		// Figure out how many breakout rooms are available
+		var highest = -1;
+		var roles = guild.roles.cache.array();
+		var breakoutRoles = {};
+		for(var i = 0; i < roles.length; i++)
+		{
+			if(roles[i].name.toLowerCase().startsWith("breakout"))
+			{
+				var num = roles[i].name.split(" ")[1];
+				breakoutRoles[num] = roles[i];
+				if(Number(num) > highest)
+				{
+					highest = Number(num);
+				}
+			}
+		}
 
-		// TODO: Finish
+		if(highest === -1)
+		{
+			msg.reply("There are no breakout rooms. Use $create to create some.");
+			return;
+		}
+
+		for(var i = 0; i < assignArr.length; i++)
+		{
+			assignArr[i].roles.add(breakoutRoles[(i % highest) + 1]);
+		}
 
 	}).catch(err => {
 		log(err);
@@ -158,8 +183,20 @@ function create(n, guild)
 
 			}).then(category => {
 				// Update permissions
+				var roles = guild.roles.cache.array();
+				var organizer;
+				for(var j = 0; j < roles.length; j++)
+				{
+					if(roles[j].name === "Organizer")
+					{
+						organizer = roles[j];
+						break;
+					}
+				}
+
 				category.updateOverwrite(guild.roles.everyone, {VIEW_CHANNEL: false, CONNECT: false});
 				category.updateOverwrite(role, {VIEW_CHANNEL: true, CONNECT: true});
+				category.updateOverwrite(organizer, {VIEW_CHANNEL: true, CONNECT: true});
 
 				// Create channels
 				guild.channels.create("breakout-" + i, {
@@ -257,7 +294,7 @@ client.on('error', err => {
 client.on('message', msg => {
 	if(!checkPermission(msg))
 		return;
-		
+
 	var msgArr = msg.content.split(" ");
 	var command = msgArr[0].toLowerCase();
 	if(!command.startsWith("$")) return;
@@ -270,7 +307,7 @@ client.on('message', msg => {
 			msg.reply("Pong!");
 			break;
 		case "$assign":
-			assignRoles(msg.guild);
+			assignRoles(msg);
 			break;
 		case "$create":
 			if(msgArr.length === 1)
