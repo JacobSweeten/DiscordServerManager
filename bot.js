@@ -82,6 +82,8 @@ var noKickRoles = config.Configuration.NoKickRoles.replace(/\s*,\s*/g, ',').spli
 
 var toConfirm = [];
 
+var helpString = "```$create n=x\tCreates x breakout channels.\n$assign\t\tFinds existing breakout channels and assigns users to them at random.\n$clean\t\tCleans all breakout channels and roles.```";
+
 function checkPermission(msg)
 {
 	if(msg.member.hasPermission('ADMINISTRATOR'))
@@ -115,7 +117,7 @@ function assignRoles(msg)
 				}
 			}
 			
-			// Id the user does not have a special role, add to list.
+			// If the user does not have a special role, add to list.
 			if(assign)
 			{
 				assignArr.push(userArr[i]);
@@ -158,7 +160,9 @@ function assignRoles(msg)
 
 		for(var i = 0; i < assignArr.length; i++)
 		{
-			assignArr[i].roles.add(breakoutRoles[(i % highest) + 1]);
+			assignArr[i].roles.add(breakoutRoles[(i % highest) + 1]).catch(err => {
+				msg.reply("I do not have permission to add a role to a user. Please ensure that I have a higher permission level that them.");
+			});
 		}
 
 	}).catch(err => {
@@ -167,8 +171,9 @@ function assignRoles(msg)
 	});
 }
 
-function create(n, guild)
+function create(n, msg)
 {
+	var guild = msg.guild;
 	for(let i = 1; i <= n; i++)
 	{
 		// Create role
@@ -192,6 +197,12 @@ function create(n, guild)
 						organizer = roles[j];
 						break;
 					}
+				}
+				
+				if(organizer === undefined)
+				{
+					msg.reply("Organizer role does not exist. Please create it.");
+					return;
 				}
 
 				category.updateOverwrite(guild.roles.everyone, {VIEW_CHANNEL: false, CONNECT: false});
@@ -280,6 +291,7 @@ function confirm(msg)
 client.on('ready', () => {
 	log("Connected to Discord.")
 	clearInterval(reconnectInterval);
+	client.user.setActivity("$help");
 });
 
 client.on('error', err => {
@@ -303,6 +315,9 @@ client.on('message', msg => {
 
 	switch(command)
 	{
+		case "$help":
+			msg.reply(helpString);
+			break;
 		case "$ping":
 			msg.reply("Pong!");
 			break;
@@ -336,7 +351,7 @@ client.on('message', msg => {
 			}
 			else
 			{
-				create(n, msg.guild);
+				create(n, msg);
 			}
 
 			break;
