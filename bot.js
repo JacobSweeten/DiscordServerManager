@@ -345,7 +345,7 @@ client.on('message', msg => {
 			}
 
 			var n = Number(args[1]);
-			if(n < 1 || n > 10)
+			if(n < 1 || n > 30)
 			{
 				msg.reply("n too large!");
 			}
